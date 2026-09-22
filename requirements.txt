@@ -1,5 +1,6 @@
 fastapi
 sqlalchemy
+psycopg[binary]
 python-jose[cryptography]
 bcrypt
 pydantic[email]

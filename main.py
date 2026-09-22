@@ -1,21 +1,31 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import os
 import bcrypt
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr, ConfigDict
 from sqlalchemy import create_engine, ForeignKey, String, Text, DateTime
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, Session, relationship
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, Session
 
 # ─── Конфиг ──────────────────────────────────────────────
-SECRET_KEY = "change-me-in-production-please-very-secret"
+SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production-please-very-secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # сутки
 
 # ─── БД ──────────────────────────────────────────────────
-engine = create_engine("sqlite:///./knowledge.db", connect_args={"check_same_thread": False})
+# Локально: SQLite (файл knowledge.db)
+# На проде (Vercel): DATABASE_URL из переменных окружения → PostgreSQL
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./knowledge.db")
+
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    # PostgreSQL (Neon, Supabase, etc.)
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
@@ -149,11 +159,20 @@ app = FastAPI(title="My Knowledge Base API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],
+    allow_origins=[
+        "http://localhost:4200",
+        # Добавь сюда продовый домен Angular, когда задеплоишь:
+        # "https://my-knowledge-base.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+def root():
+    return {"status": "ok", "docs": "/docs"}
 
 
 # ─── Auth ────────────────────────────────────────────────
@@ -219,7 +238,6 @@ def create_article(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Проверка, что parent принадлежит пользователю (если указан)
     if data.parentId is not None:
         parent = (
             db.query(Article)
