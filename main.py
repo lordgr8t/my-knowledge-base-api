@@ -9,6 +9,7 @@ from jose import JWTError, jwt
 from pydantic import BaseModel, EmailStr, ConfigDict
 from sqlalchemy import create_engine, ForeignKey, String, Text, DateTime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker, Session
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 # ─── Конфиг ──────────────────────────────────────────────
 SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production-please-very-secret")
@@ -145,13 +146,23 @@ class ArticleUpdate(BaseModel):
 
 
 class ArticleOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(from_attributes=True)
     id: int
     title: str
     content: str
-    parentId: Optional[int] = None
-    createdAt: datetime
-    updatedAt: datetime
+    parentId: Optional[int] = Field(
+        default=None,
+        validation_alias="parent_id",
+        serialization_alias="parentId",
+    )
+    createdAt: datetime = Field(
+        validation_alias="created_at",
+        serialization_alias="createdAt",
+    )
+    updatedAt: datetime = Field(
+        validation_alias="updated_at",
+        serialization_alias="updatedAt",
+    )
 
 
 # ─── FastAPI ─────────────────────────────────────────────
