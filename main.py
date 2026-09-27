@@ -172,8 +172,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:4200",
-        # Добавь сюда продовый домен Angular, когда задеплоишь:
-        # "https://my-knowledge-base.vercel.app",
+        "https://my-knowledge-base-five.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
